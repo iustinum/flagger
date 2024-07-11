@@ -1,49 +1,37 @@
+import os
 import argparse
 import datasets
-from enum import Enum
+from scoring import calculate_score, get_interest_flag
 
-class InterestFlag(Enum):
-    INTERESTING = True
-    NOT_INTERESTING = False
-    DONT_BOTHER = "Don't bother"
+def process_domain(domain_data, interesting_keywords_path, uninteresting_keywords_path):
+    domain_score = calculate_score(domain_data['content'], interesting_keywords_path, uninteresting_keywords_path)
+    domain_data['score'] = domain_score
+    domain_data['interest_flag'] = get_interest_flag(domain_score)
+    return domain_data
 
-def contains_words(input_string, word_file):
-    with open(word_file, 'r') as file:
-        words = [word.strip() for word in file]
-    
-    input_string = input_string.lower()
-    for word in words:
-        word = word.lower()
-        if word in input_string:
-            return True
-    
-    return False
+def main(input_json_path, interesting_keywords_path, uninteresting_keywords_path, output_json_path):
+    domain_dataset = datasets.load_dataset('json', data_files=input_json_path, split="train")
 
-def add_flag(img_file, word_file_path, dont_bother_file_path):
-    if contains_words(img_file['content'], dont_bother_file_path):
-        img_file['interest_flag'] = InterestFlag.DONT_BOTHER
-    elif contains_words(img_file['content'], word_file_path):
-        img_file['interest_flag'] = InterestFlag.INTERESTING
-    else:
-        img_file['interest_flag'] = InterestFlag.NOT_INTERESTING
-    return img_file
+    processed_dataset = domain_dataset.map(lambda domain: process_domain(domain, interesting_keywords_path, uninteresting_keywords_path))
 
-def main(input_file, word_file, dont_bother_file, output_file):
-    dt = datasets.load_dataset('json', data_files=input_file, split="train")
+    processed_dataset.to_json(output_json_path)
 
-    new = dt.map(lambda x: add_flag(x, word_file, dont_bother_file))
-
-    new.to_json(output_file)
-
-    print(f"Processing complete. Output saved to {output_file}")
+    print(f"Processing complete. Output saved to {output_json_path}")
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Process JSON file and add interest flags based on keywords.")
-    parser.add_argument("input_file", help="Path to the input JSON file")
-    parser.add_argument("word_file", help="Path to the file containing keywords") # If input_file contains anything word from wordlist, add the True flag
-    parser.add_argument("dont_bother_file", help="Path to the file containing keywords that we dont wanna bother")
-    parser.add_argument("output_file", help="Path to save the output JSON file")
+    parser = argparse.ArgumentParser(description="Process domains, add interest flags and scores based on keywords.")
+    parser.add_argument("-i", "--input", required=True, help="Path to the input JSON file")
+    parser.add_argument("-o", "--output", help="Path to save the output JSON file (default: processed_domains.json)")
+    parser.add_argument("--interesting", default="interesting_keywords.txt", 
+                        help="Path to the file containing interesting keywords (default: interesting_keywords.txt)")
+    parser.add_argument("--uninteresting", default="uninteresting_keywords.txt", 
+                        help="Path to the file containing uninteresting keywords (default: uninteresting_keywords.txt)")
     
     args = parser.parse_args()
 
-    main(args.input_file, args.word_file, args.dont_bother_file, args.output_file)
+    # Set default output filename if not provided
+    if not args.output:
+        input_name = os.path.splitext(os.path.basename(args.input))[0]
+        args.output = f"{input_name}_processed.json"
+
+    main(args.input, args.interesting, args.uninteresting, args.output)
