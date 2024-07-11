@@ -4,3 +4,4 @@ claude-env/
 input_domains.json
 input_domains_processed.json
 vision.ipynb
+score_distribution.png
