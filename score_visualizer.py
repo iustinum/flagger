@@ -1,7 +1,6 @@
 import json
 import matplotlib.pyplot as plt
 import numpy as np
-import argparse
 from operator import itemgetter
 
 def load_data(file_path):
@@ -39,10 +38,29 @@ def print_domains(domains, title):
         print(f"   Content: {domain['content'][:100]}..." if len(domain['content']) > 100 else f"   Content: {domain['content']}")
         print()
 
-def main():
+def visualize_scores(input_file, output_file, top_n, bottom_n):
+    data = load_data(input_file)
+    scores = [item['score'] for item in data]
+    
+    create_histogram(scores, output_file)
+    
+    if top_n is not None:
+        top_domains = get_top_domains(data, top_n)
+        print_domains(top_domains, f"Top {top_n} domains by score")
+    
+    if bottom_n is not None:
+        bottom_domains = get_bottom_domains(data, bottom_n)
+        print_domains(bottom_domains, f"Bottom {bottom_n} domains by score")
+    
+    if top_n is None and bottom_n is None:
+        print("\nNo domains listed. Use -t or -b flags to display top or bottom domains.")
+
+if __name__ == "__main__":
+    import argparse
+    
     parser = argparse.ArgumentParser(description="Generate a histogram of domain scores and optionally list top/bottom domains")
-    parser.add_argument("-i", "--input", default="/Users/justin/playground/aroocon/input_domains_processed.json",
-                        help="Path to the input JSON file (default: /Users/justin/playground/aroocon/input_domains_processed.json)")
+    parser.add_argument("-i", "--input", required=True,
+                        help="Path to the input JSON file")
     parser.add_argument("-o", "--output", default="score_distribution.png",
                         help="Path to save the output histogram image (default: score_distribution.png)")
     parser.add_argument("-t", "--top", type=int, metavar='N',
@@ -52,21 +70,4 @@ def main():
     
     args = parser.parse_args()
     
-    data = load_data(args.input)
-    scores = [item['score'] for item in data]
-    
-    create_histogram(scores, args.output)
-    
-    if args.top is not None:
-        top_domains = get_top_domains(data, args.top)
-        print_domains(top_domains, f"Top {args.top} domains by score")
-    
-    if args.bottom is not None:
-        bottom_domains = get_bottom_domains(data, args.bottom)
-        print_domains(bottom_domains, f"Bottom {args.bottom} domains by score")
-    
-    if args.top is None and args.bottom is None:
-        print("\nNo domains listed. Use -t or -b flags to display top or bottom domains.")
-
-if __name__ == "__main__":
-    main()
+    visualize_scores(args.input, args.output, args.top, args.bottom)

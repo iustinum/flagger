@@ -2,7 +2,6 @@ import os
 import json
 import easyocr
 from tqdm import tqdm
-import argparse
 
 def extract_text_from_image(image_path):
     reader = easyocr.Reader(['en'])  # Specify the languages you want to support
@@ -34,16 +33,15 @@ def process_images(folder_path, output_file):
     
     print(f"Processing complete. Results saved to {output_file}")
 
-def main():
+if __name__ == "__main__":
+    import argparse
+    
     parser = argparse.ArgumentParser(description="Extract text from images in a folder")
-    parser.add_argument("-i", "--input", default="/Users/justin/Downloads/screenshots", 
-                        help="Path to the folder containing images (default: /Users/justin/Downloads/screenshots)")
+    parser.add_argument("-i", "--input", required=True, 
+                        help="Path to the folder containing images")
     parser.add_argument("-o", "--output", default="input_domains.json", 
                         help="Path to save the output JSON file (default: input_domains.json)")
     
     args = parser.parse_args()
     
     process_images(args.input, args.output)
-
-if __name__ == "__main__":
-    main()
